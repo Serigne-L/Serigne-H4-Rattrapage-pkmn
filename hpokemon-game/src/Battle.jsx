@@ -63,6 +63,12 @@ class BattleScene extends Phaser.Scene {
     this.setPokemonTeam = setPokemonTeam;
     this.setOpponentPokemon = setOpponentPokemon;
     this.currentPlayerPokemonIndex = 0;
+    this.pokemonTeam = [];
+    this.opponentPokemon = null;
+    this.playerPokemon = null;
+    this.playerSprite = null;
+    this.opponentSprite = null;
+    this.isSceneActive = true;
   }
 
   preload() {
@@ -76,6 +82,7 @@ class BattleScene extends Phaser.Scene {
       );
       const team = response.data;
       this.setPokemonTeam(team);
+      this.pokemonTeam = team;
 
       if (team.length === 0) {
         console.error("L'équipe du joueur est vide");
@@ -119,6 +126,15 @@ class BattleScene extends Phaser.Scene {
 
   async loadPokemon(pokemon, spriteKey) {
     return new Promise((resolve, reject) => {
+      if (!this.sys.isActive()) {
+        this.isSceneActive = false;
+        return reject('Scène inactive lors du chargement du Pokémon');
+      }
+
+      if (this.textures.exists(spriteKey)) {
+        this.textures.remove(spriteKey);
+      }
+
       this.load.image(spriteKey, pokemon.frontSprite);
       this.load.once('complete', () => {
         if (this.sys.isActive()) {
@@ -135,6 +151,8 @@ class BattleScene extends Phaser.Scene {
   }
 
   addPokemonSprite(spriteKey, pokemon) {
+    if (!this.isSceneActive) return;
+
     if (spriteKey === 'playerPokemonSprite') {
       this.playerSprite?.destroy();
       this.playerSprite = this.add.sprite(150, 300, spriteKey);
@@ -187,14 +205,22 @@ class BattleScene extends Phaser.Scene {
       skill.power || 50,
     );
     this.opponentPokemon.hp -= damage;
-    this.opponentHpText.setText(`HP: ${this.opponentPokemon.hp}`);
-    this.log.setText(
-      `${this.playerPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
-    );
+    if (this.opponentHpText && this.opponentHpText.active) {
+      this.opponentHpText.setText(`HP: ${this.opponentPokemon.hp}`);
+    }
+    if (this.log && this.log.active) {
+      this.log.setText(
+        `${this.playerPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
+      );
+    }
 
     if (this.opponentPokemon.hp <= 0) {
-      this.log.setText(`${this.opponentPokemon.name} est KO !`);
-      this.opponentSprite.setVisible(false);
+      if (this.log && this.log.active) {
+        this.log.setText(`${this.opponentPokemon.name} est KO !`);
+      }
+      if (this.opponentSprite && this.opponentSprite.active) {
+        this.opponentSprite.setVisible(false);
+      }
       const newOpponent = await this.loadNewOpponent();
       if (newOpponent) this.opponentPokemon = newOpponent;
     } else {
@@ -203,7 +229,11 @@ class BattleScene extends Phaser.Scene {
   }
 
   opponentAttack() {
-    if (!this.opponentPokemon || !this.opponentPokemon.skills) {
+    if (
+      !this.opponentPokemon ||
+      !this.opponentPokemon.skills ||
+      this.opponentPokemon.skills.length === 0
+    ) {
       console.error('Le Pokémon adverse ou ses compétences sont manquants');
       return;
     }
@@ -218,21 +248,31 @@ class BattleScene extends Phaser.Scene {
       skill.power || 50,
     );
     this.playerPokemon.hp -= damage;
-    this.playerHpText.setText(`HP: ${this.playerPokemon.hp}`);
-    this.log.setText(
-      `${this.opponentPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
-    );
+    if (this.playerHpText && this.playerHpText.active) {
+      this.playerHpText.setText(`HP: ${this.playerPokemon.hp}`);
+    }
+    if (this.log && this.log.active) {
+      this.log.setText(
+        `${this.opponentPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
+      );
+    }
 
     if (this.playerPokemon.hp <= 0) {
-      this.log.setText(`${this.playerPokemon.name} est KO !`);
+      if (this.log && this.log.active) {
+        this.log.setText(`${this.playerPokemon.name} est KO !`);
+      }
 
       this.currentPlayerPokemonIndex += 1;
       if (this.currentPlayerPokemonIndex < this.pokemonTeam.length) {
         this.playerPokemon = this.pokemonTeam[this.currentPlayerPokemonIndex];
         this.loadPokemon(this.playerPokemon, 'playerPokemonSprite');
       } else {
-        this.log.setText('Tous vos Pokémon sont KO ! Vous avez perdu.');
-        this.playerSprite.setVisible(false);
+        if (this.log && this.log.active) {
+          this.log.setText('Tous vos Pokémon sont KO ! Vous avez perdu.');
+        }
+        if (this.playerSprite && this.playerSprite.active) {
+          this.playerSprite.setVisible(false);
+        }
       }
     }
   }
