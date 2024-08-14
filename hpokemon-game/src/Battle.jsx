@@ -81,12 +81,10 @@ const Battle = () => {
           scene.opponentHpText.destroy();
         }
 
-        // Remove existing texture if it exists
         if (scene.textures.exists('opponentPokemonSprite')) {
           scene.textures.remove('opponentPokemonSprite');
         }
 
-        // Check if the scene is still valid before adding the new texture
         if (scene.textures) {
           scene.textures.addImage('opponentPokemonSprite', opponentImage);
           scene.opponentPokemon = scene.add.sprite(
@@ -128,12 +126,10 @@ const Battle = () => {
           scene.playerHpText.destroy();
         }
 
-        // Remove existing texture if it exists
         if (scene.textures.exists('playerPokemonSprite')) {
           scene.textures.remove('playerPokemonSprite');
         }
 
-        // Check if the scene is still valid before adding the new texture
         if (scene.textures) {
           scene.textures.addImage('playerPokemonSprite', playerImage);
           scene.playerPokemon = scene.add.sprite(
