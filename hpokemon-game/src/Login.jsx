@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { useUser } from './UserContext';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
+  const { login } = useUser();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const navigate = useNavigate();
-  const { setUser } = useUser();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,13 +20,11 @@ const Login = () => {
           password,
         },
       );
-
-      // Mettre à jour le contexte utilisateur
-      setUser(response.data.user);
-
-      navigate('/dashboard'); // Rediriger vers le dashboard après connexion
-    } catch (err) {
-      setError('Email ou mot de passe incorrect. Veuillez réessayer.');
+      login(response.data.user); // Mettre à jour le contexte avec les données de l'utilisateur
+      navigate('/dashboard'); // Rediriger l'utilisateur après la connexion
+    } catch (error) {
+      setError('Email ou mot de passe incorrect.');
+      console.error('Erreur lors de la connexion:', error);
     }
   };
 
@@ -42,9 +40,10 @@ const Login = () => {
             <label className="block text-gray-700">Email</label>
             <input
               type="email"
-              className="w-full p-2 border border-gray-300 rounded mt-1"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mt-1"
+              placeholder="Email"
               required
             />
           </div>
@@ -52,9 +51,10 @@ const Login = () => {
             <label className="block text-gray-700">Mot de passe</label>
             <input
               type="password"
-              className="w-full p-2 border border-gray-300 rounded mt-1"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded mt-1"
+              placeholder="Mot de passe"
               required
             />
           </div>
@@ -65,12 +65,6 @@ const Login = () => {
             Se connecter
           </button>
         </form>
-        <p className="text-center text-gray-600 mt-4">
-          Pas encore de compte ?{' '}
-          <a href="/register" className="text-blue-500 hover:underline">
-            Inscrivez-vous
-          </a>
-        </p>
       </div>
     </div>
   );

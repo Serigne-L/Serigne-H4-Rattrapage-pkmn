@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import { useUser } from './UserContext';
+import { useNavigate } from 'react-router-dom';
 
 const ViewTeam = () => {
+  const { user } = useUser();
   const [pokemons, setPokemons] = useState([]);
   const navigate = useNavigate();
-  const { user } = useUser();
 
   useEffect(() => {
     const fetchPokemons = async () => {
-      if (!user) return; // Vérifie que l'utilisateur est bien connecté
+      if (!user) return;
       try {
         const response = await axios.get(
           `http://localhost:4000/api/users/${user.id}/team`,
@@ -25,7 +25,6 @@ const ViewTeam = () => {
   }, [user]);
 
   const removeFromTeam = async (pokemonId) => {
-    if (!user) return; // Vérifie que l'utilisateur est bien connecté
     try {
       await axios.delete(
         `http://localhost:4000/api/users/${user.id}/team/${pokemonId}`,
@@ -38,32 +37,38 @@ const ViewTeam = () => {
 
   return (
     <div className="min-h-screen bg-gray-100 p-8">
-      <div className="flex justify-between items-center mb-8">
-        <h2 className="text-3xl font-bold">Mon Équipe Pokémon</h2>
-        <button
-          onClick={() => navigate(-1)}
-          className="bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
-        >
-          Retour
-        </button>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
-        {pokemons.map((pokemon) => (
-          <PokemonCard
-            key={pokemon.id}
-            pokemon={pokemon}
-            removeFromTeam={removeFromTeam}
-          />
-        ))}
-      </div>
+      <h2 className="text-3xl font-bold text-center mb-8">
+        Mon Équipe Pokémon
+      </h2>
+      <button
+        onClick={() => navigate('/dashboard')}
+        className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded mb-4"
+      >
+        Retour au tableau de bord
+      </button>
+      {pokemons.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+          {pokemons.map((pokemon) => (
+            <PokemonCard
+              key={pokemon.id}
+              pokemon={pokemon}
+              removeFromTeam={removeFromTeam}
+            />
+          ))}
+        </div>
+      ) : (
+        <p className="text-center text-xl text-gray-700">
+          Aucun Pokémon dans votre équipe.
+        </p>
+      )}
     </div>
   );
 };
 
 const PokemonCard = ({ pokemon, removeFromTeam }) => {
   return (
-    <div className="relative bg-white border-4 border-gray-800 rounded-lg shadow-lg overflow-hidden">
-      <div className="bg-gray-200 p-2 text-center">
+    <div className="relative bg-white rounded-lg shadow-lg overflow-hidden transform transition duration-300 hover:scale-105">
+      <div className="bg-gray-200 p-4">
         <img
           src={pokemon.frontSprite}
           alt={pokemon.name}
@@ -75,26 +80,20 @@ const PokemonCard = ({ pokemon, removeFromTeam }) => {
         <p className="text-gray-600">
           Type: <span className="capitalize">{pokemon.type}</span>
         </p>
-        <div className="grid grid-cols-2 gap-4 mt-4">
-          <p className="text-gray-600">HP: {pokemon.hp}</p>
-          <p className="text-gray-600">Attack: {pokemon.attack}</p>
-          <p className="text-gray-600">Defense: {pokemon.defense}</p>
-          <p className="text-gray-600">Speed: {pokemon.speed}</p>
-          <p className="text-gray-600">Sp. Attack: {pokemon.specialAttack}</p>
-          <p className="text-gray-600">Sp. Defense: {pokemon.specialDefense}</p>
+        <div className="grid grid-cols-2 gap-4 mt-4 text-gray-600">
+          <p>HP: {pokemon.hp}</p>
+          <p>Attack: {pokemon.attack}</p>
+          <p>Defense: {pokemon.defense}</p>
+          <p>Speed: {pokemon.speed}</p>
+          <p>Sp. Attack: {pokemon.specialAttack}</p>
+          <p>Sp. Defense: {pokemon.specialDefense}</p>
         </div>
         <button
           onClick={() => removeFromTeam(pokemon.id)}
-          className="mt-4 w-full bg-red-500 hover:bg-red-700 text-white font-bold py-2 px-4 rounded"
+          className="absolute top-2 right-2 bg-red-500 text-white px-2 py-1 rounded-full hover:bg-red-700"
         >
-          Supprimer de l'équipe
+          Supprimer
         </button>
-      </div>
-      <div className="absolute top-0 left-0 bg-yellow-500 text-white px-2 py-1 text-xs font-bold">
-        N°{pokemon.id}
-      </div>
-      <div className="absolute bottom-0 right-0 bg-blue-500 text-white px-2 py-1 text-xs font-bold">
-        {pokemon.level ? `Lv ${pokemon.level}` : ''}
       </div>
     </div>
   );
