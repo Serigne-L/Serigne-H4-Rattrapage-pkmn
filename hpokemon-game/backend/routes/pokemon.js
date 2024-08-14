@@ -16,40 +16,39 @@ router.get('/pokemons', async (req, res) => {
     }
 });
 
-// Récupérer un Pokémon par son ID
-router.get('/pokemons/:id', async (req, res) => {
+
+// Ajouter un Pokémon à l'équipe d'un utilisateur
+router.post('/users/:id/team', async (req, res) => {
     const { id } = req.params;
+    const { pokemonIds } = req.body;
+
     try {
-        const pokemon = await prisma.pokemon.findUnique({
+        // On doit d'abord vérifier si l'utilisateur existe
+        const user = await prisma.user.findUnique({
             where: { id: parseInt(id) },
-            include: { skills: true },
         });
-        if (!pokemon) {
-            return res.status(404).json({ error: 'Pokemon not found' });
+
+        if (!user) {
+            return res.status(404).json({ error: 'Utilisateur non trouvé' });
         }
-        res.json(pokemon);
+
+        // On ajoute les Pokémon à l'équipe de l'utilisateur
+        for (const pokemonId of pokemonIds) {
+            await prisma.team.create({
+                data: {
+                    userId: parseInt(id),
+                    pokemonId: pokemonId,
+                },
+            });
+        }
+
+        res.status(201).json({ message: 'Pokémon ajouté à l\'équipe avec succès' });
     } catch (error) {
-        res.status(500).json({ error: 'Something went wrong' });
+        console.error('Erreur lors de l’ajout du Pokémon à l’équipe:', error);
+        res.status(500).json({ error: 'Quelque chose s\'est mal passé' });
     }
 });
 
-// Créer une équipe pour un utilisateur
-router.post('/users/:id/team', async (req, res) => {
-    const { id } = req.params;
-    const { pokemonIds } = req.body; // tableau d'IDs de Pokémon
-    try {
-        const team = await prisma.team.create({
-            data: {
-                userId: parseInt(id),
-                pokemon: {
-                    connect: pokemonIds.map((pokemonId) => ({ id: pokemonId })),
-                },
-            },
-        });
-        res.status(201).json(team);
-    } catch (error) {
-        res.status(500).json({ error: 'Something went wrong' });
-    }
-});
+
 
 module.exports = router;

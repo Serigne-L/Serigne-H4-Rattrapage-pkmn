@@ -1,24 +1,31 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import LandingPage from './LandingPage';
+import Register from './Register';
+import Login from './Login';
+import Dashboard from './Dashboard';
+import Battle from './Battle';
+import ManageTeam from './ManageTeam';
+import ViewTeam from './ViewTeam';
+import ComposeTeam from './ComposeTeam';
+import { UserProvider } from './UserContext';
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <UserProvider>
+      <Router>
+        <Routes>
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/battle" element={<Battle />} />
+          <Route path="/manage-team" element={<ManageTeam />} />
+          <Route path="/view-team" element={<ViewTeam />} />
+          <Route path="/compose-team" element={<ComposeTeam />} />
+        </Routes>
+      </Router>
+    </UserProvider>
   );
 }
 

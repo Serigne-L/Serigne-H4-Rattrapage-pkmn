@@ -18,7 +18,7 @@ model User {
   email     String   @unique
   password  String
   username  String   @unique
-  teams     Team[]
+  teams     Team[]   // Relation many-to-many avec Pokémon via la table Team
 }
 
 model Pokemon {
@@ -34,7 +34,7 @@ model Pokemon {
   frontSprite    String        // URL du sprite de face du Pokémon
   backSprite     String        // URL du sprite de dos du Pokémon
   skills         PokemonSkill[]
-  teams          Team[]
+  teams          Team[]        // Relation many-to-many avec User via la table Team
 }
 
 model PokemonSkill {
@@ -52,4 +52,6 @@ model Team {
   userId    Int
   pokemon   Pokemon  @relation(fields: [pokemonId], references: [id])
   pokemonId Int
+
+  @@unique([userId, pokemonId])  // Empêcher les doublons dans l'équipe d'un utilisateur
 }
