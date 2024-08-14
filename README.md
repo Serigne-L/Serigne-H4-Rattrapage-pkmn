@@ -58,6 +58,10 @@ cd backend
 npx prisma migrate dev --name init
 ```
 
+```
+npx prisma generate
+```
+
 Cette commande créera la base de données et appliquera les migrations.
 
 ```
