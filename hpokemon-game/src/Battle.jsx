@@ -9,7 +9,6 @@ const Battle = () => {
   const navigate = useNavigate();
   const phaserGame = useRef(null);
   const phaserContainer = useRef(null);
-  const [currentPlayerPokemonIndex, setCurrentPlayerPokemonIndex] = useState(0);
   const [pokemonTeam, setPokemonTeam] = useState([]);
   const [opponentPokemon, setOpponentPokemon] = useState(null);
 
@@ -19,11 +18,7 @@ const Battle = () => {
       width: 1200,
       height: 1200,
       parent: phaserContainer.current,
-      scene: {
-        preload: preload,
-        create: create,
-        update: update,
-      },
+      scene: new BattleScene(user, setPokemonTeam, setOpponentPokemon),
       backgroundColor: '#6666EB',
     };
 
@@ -34,271 +29,7 @@ const Battle = () => {
         phaserGame.current.destroy(true);
       }
     };
-  }, []);
-
-  const preload = function () {};
-
-  const create = async function () {
-    try {
-      const response = await axios.get(
-        `http://localhost:4000/api/users/${user.id}/team`,
-      );
-      const team = response.data;
-      setPokemonTeam(team);
-
-      const opponent = await loadNewOpponent(this);
-      if (opponent) {
-        setOpponentPokemon(opponent);
-        loadPlayerPokemon(this, team[0]);
-      } else {
-        console.error("Couldn't load opponent Pokémon");
-      }
-    } catch (error) {
-      console.error('Error during create phase:', error);
-    }
-  };
-
-  const update = function () {};
-
-  const loadNewOpponent = async (scene) => {
-    try {
-      const opponent = await axios.get(
-        'http://localhost:4000/api/random-pokemon',
-      );
-      const opponentPokemon = opponent.data;
-
-      if (!opponentPokemon || !opponentPokemon.frontSprite) {
-        console.error('Failed to load opponent Pokémon data');
-        return null;
-      }
-
-      const opponentImage = await loadImage(opponentPokemon.frontSprite);
-      if (opponentImage) {
-        if (scene.opponentPokemon) {
-          scene.opponentPokemon.destroy();
-        }
-        if (scene.opponentHpText) {
-          scene.opponentHpText.destroy();
-        }
-
-        if (scene.textures.exists('opponentPokemonSprite')) {
-          scene.textures.remove('opponentPokemonSprite');
-        }
-
-        if (scene.textures) {
-          scene.textures.addImage('opponentPokemonSprite', opponentImage);
-          scene.opponentPokemon = scene.add.sprite(
-            650,
-            300,
-            'opponentPokemonSprite',
-          );
-
-          scene.opponentHpText = scene.add.text(
-            650,
-            260,
-            `HP: ${opponentPokemon.hp}`,
-            {
-              font: '16px Arial',
-              fill: '#ffffff',
-            },
-          );
-        }
-
-        return opponentPokemon;
-      } else {
-        console.error('Failed to load opponent sprite image');
-        return null;
-      }
-    } catch (error) {
-      console.error('Error loading opponent Pokémon', error);
-      return null;
-    }
-  };
-
-  const loadPlayerPokemon = async (scene, playerPokemon) => {
-    try {
-      const playerImage = await loadImage(playerPokemon.frontSprite);
-      if (playerImage) {
-        if (scene.playerPokemon) {
-          scene.playerPokemon.destroy();
-        }
-        if (scene.playerHpText) {
-          scene.playerHpText.destroy();
-        }
-
-        if (scene.textures.exists('playerPokemonSprite')) {
-          scene.textures.remove('playerPokemonSprite');
-        }
-
-        if (scene.textures) {
-          scene.textures.addImage('playerPokemonSprite', playerImage);
-          scene.playerPokemon = scene.add.sprite(
-            150,
-            300,
-            'playerPokemonSprite',
-          );
-
-          scene.playerHpText = scene.add.text(
-            150,
-            260,
-            `HP: ${playerPokemon.hp}`,
-            {
-              font: '16px Arial',
-              fill: '#ffffff',
-            },
-          );
-
-          playerPokemon.skills.forEach((skill, index) => {
-            if (scene.skillTexts && scene.skillTexts[index]) {
-              scene.skillTexts[index].destroy();
-            }
-
-            scene.skillTexts = scene.skillTexts || [];
-            scene.skillTexts[index] = scene.add
-              .text(20, 50 + index * 50, skill.name, {
-                font: '16px Arial',
-                fill: '#ffffff',
-              })
-              .setInteractive()
-              .on('pointerdown', () =>
-                attack(skill, opponentPokemon, playerPokemon, scene),
-              );
-          });
-
-          if (scene.log) {
-            scene.log.destroy();
-          }
-
-          scene.log = scene.add.text(20, 400, '', {
-            font: '16px Arial',
-            fill: '#ffffff',
-          });
-        }
-      } else {
-        console.error('Failed to load player sprite image');
-      }
-    } catch (error) {
-      console.error('Error loading player Pokémon', error);
-    }
-  };
-
-  const attack = async (skill, opponentPokemon, playerPokemon, scene) => {
-    if (!opponentPokemon || !opponentPokemon.hp) {
-      console.error('Opponent Pokémon data is missing or invalid');
-      return;
-    }
-
-    const skillPower = skill.power || 50;
-    const damage = calculateDamage(playerPokemon, opponentPokemon, skillPower);
-    opponentPokemon.hp -= damage;
-    scene.opponentHpText.setText(`HP: ${opponentPokemon.hp}`);
-    scene.log.setText(
-      `${playerPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
-    );
-
-    if (opponentPokemon.hp <= 0) {
-      scene.log.setText(`${opponentPokemon.name} est KO !`);
-      scene.opponentPokemon.setVisible(false);
-      const newOpponent = await loadNewOpponent(scene);
-      if (newOpponent) setOpponentPokemon(newOpponent);
-    } else {
-      opponentAttack(scene);
-    }
-  };
-
-  const opponentAttack = (scene) => {
-    if (!opponentPokemon || !opponentPokemon.skills) {
-      console.error('Opponent Pokémon or skills are missing');
-      return;
-    }
-
-    const skill =
-      opponentPokemon.skills[
-        Math.floor(Math.random() * opponentPokemon.skills.length)
-      ];
-    const skillPower = skill.power || 50;
-    const damage = calculateDamage(
-      opponentPokemon,
-      pokemonTeam[currentPlayerPokemonIndex],
-      skillPower,
-    );
-    pokemonTeam[currentPlayerPokemonIndex].hp -= damage;
-    scene.playerHpText.setText(
-      `HP: ${pokemonTeam[currentPlayerPokemonIndex].hp}`,
-    );
-    scene.log.setText(
-      `${opponentPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
-    );
-
-    if (pokemonTeam[currentPlayerPokemonIndex].hp <= 0) {
-      scene.log.setText(
-        `${pokemonTeam[currentPlayerPokemonIndex].name} est KO !`,
-      );
-
-      const nextIndex = currentPlayerPokemonIndex + 1;
-      if (nextIndex < pokemonTeam.length) {
-        setCurrentPlayerPokemonIndex(nextIndex);
-        loadPlayerPokemon(scene, pokemonTeam[nextIndex]);
-      } else {
-        scene.log.setText('Tous vos Pokémon sont KO ! Vous avez perdu.');
-        scene.playerPokemon.setVisible(false);
-      }
-    }
-  };
-
-  const calculateDamage = (attacker, defender, skillPower) => {
-    if (!attacker || !defender) {
-      console.error('Attacker or defender data is missing', {
-        attacker,
-        defender,
-      });
-      return 0;
-    }
-
-    const attackStat = skillPower.isSpecial
-      ? attacker.specialAttack
-      : attacker.attack;
-    const defenseStat = skillPower.isSpecial
-      ? defender.specialDefense
-      : defender.defense;
-
-    if (
-      attackStat === null ||
-      attackStat === undefined ||
-      defenseStat === null ||
-      defenseStat === undefined
-    ) {
-      console.error('Invalid stats for damage calculation', {
-        attackStat,
-        defenseStat,
-        skillPower,
-      });
-      return 0;
-    }
-
-    const damage =
-      (((2 * (attacker.level || 50)) / 5 + 2) *
-        skillPower *
-        (attackStat / defenseStat)) /
-        50 +
-      2;
-
-    return Math.floor(damage);
-  };
-
-  const loadImage = (url) => {
-    return new Promise((resolve, reject) => {
-      const img = new Image();
-      img.crossOrigin = 'Anonymous';
-      img.onload = () => {
-        resolve(img);
-      };
-      img.onerror = (err) => {
-        reject(new Error('Failed to load image'));
-      };
-      img.src = url;
-    });
-  };
+  }, [user]);
 
   return (
     <div>
@@ -324,5 +55,230 @@ const Battle = () => {
     </div>
   );
 };
+
+class BattleScene extends Phaser.Scene {
+  constructor(user, setPokemonTeam, setOpponentPokemon) {
+    super({ key: 'BattleScene' });
+    this.user = user;
+    this.setPokemonTeam = setPokemonTeam;
+    this.setOpponentPokemon = setOpponentPokemon;
+    this.currentPlayerPokemonIndex = 0;
+  }
+
+  preload() {
+    // Preload any common assets here, if needed.
+  }
+
+  async create() {
+    try {
+      const response = await axios.get(
+        `http://localhost:4000/api/users/${this.user.id}/team`,
+      );
+      const team = response.data;
+      this.setPokemonTeam(team);
+
+      if (team.length === 0) {
+        console.error("L'équipe du joueur est vide");
+        return;
+      }
+
+      this.playerPokemon = team[this.currentPlayerPokemonIndex];
+      await this.loadPokemon(this.playerPokemon, 'playerPokemonSprite');
+
+      const opponent = await this.loadNewOpponent();
+      if (opponent) {
+        this.opponentPokemon = opponent;
+        this.setOpponentPokemon(opponent);
+      } else {
+        console.error('Impossible de charger le Pokémon adverse');
+      }
+    } catch (error) {
+      console.error('Erreur lors de la phase de création:', error);
+    }
+  }
+
+  async loadNewOpponent() {
+    try {
+      const opponent = await axios.get(
+        'http://localhost:4000/api/random-pokemon',
+      );
+      const opponentPokemon = opponent.data;
+
+      if (!opponentPokemon || !opponentPokemon.frontSprite) {
+        console.error('Données du Pokémon adverse non valides');
+        return null;
+      }
+
+      await this.loadPokemon(opponentPokemon, 'opponentPokemonSprite');
+      return opponentPokemon;
+    } catch (error) {
+      console.error('Erreur lors du chargement du Pokémon adverse', error);
+      return null;
+    }
+  }
+
+  async loadPokemon(pokemon, spriteKey) {
+    return new Promise((resolve, reject) => {
+      this.load.image(spriteKey, pokemon.frontSprite);
+      this.load.once('complete', () => {
+        if (this.sys.isActive()) {
+          this.addPokemonSprite(spriteKey, pokemon);
+          resolve();
+        } else {
+          reject(
+            'Scène inactive lors de la tentative de chargement du Pokémon',
+          );
+        }
+      });
+      this.load.start();
+    });
+  }
+
+  addPokemonSprite(spriteKey, pokemon) {
+    if (spriteKey === 'playerPokemonSprite') {
+      this.playerSprite?.destroy();
+      this.playerSprite = this.add.sprite(150, 300, spriteKey);
+      this.playerHpText?.destroy();
+      this.playerHpText = this.add.text(150, 260, `HP: ${pokemon.hp}`, {
+        font: '16px Arial',
+        fill: '#ffffff',
+      });
+      this.addSkillActions(pokemon);
+    } else if (spriteKey === 'opponentPokemonSprite') {
+      this.opponentSprite?.destroy();
+      this.opponentSprite = this.add.sprite(650, 300, spriteKey);
+      this.opponentHpText?.destroy();
+      this.opponentHpText = this.add.text(650, 260, `HP: ${pokemon.hp}`, {
+        font: '16px Arial',
+        fill: '#ffffff',
+      });
+    }
+  }
+
+  addSkillActions(playerPokemon) {
+    playerPokemon.skills.forEach((skill, index) => {
+      this.skillTexts?.[index]?.destroy();
+      this.skillTexts = this.skillTexts || [];
+      this.skillTexts[index] = this.add
+        .text(20, 50 + index * 50, skill.name, {
+          font: '16px Arial',
+          fill: '#ffffff',
+        })
+        .setInteractive()
+        .on('pointerdown', () => this.attack(skill));
+    });
+
+    this.log?.destroy();
+    this.log = this.add.text(20, 400, '', {
+      font: '16px Arial',
+      fill: '#ffffff',
+    });
+  }
+
+  async attack(skill) {
+    if (!this.opponentPokemon || !this.opponentPokemon.hp) {
+      console.error('Données du Pokémon adverse manquantes ou invalides');
+      return;
+    }
+
+    const damage = this.calculateDamage(
+      this.playerPokemon,
+      this.opponentPokemon,
+      skill.power || 50,
+    );
+    this.opponentPokemon.hp -= damage;
+    this.opponentHpText.setText(`HP: ${this.opponentPokemon.hp}`);
+    this.log.setText(
+      `${this.playerPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
+    );
+
+    if (this.opponentPokemon.hp <= 0) {
+      this.log.setText(`${this.opponentPokemon.name} est KO !`);
+      this.opponentSprite.setVisible(false);
+      const newOpponent = await this.loadNewOpponent();
+      if (newOpponent) this.opponentPokemon = newOpponent;
+    } else {
+      this.opponentAttack();
+    }
+  }
+
+  opponentAttack() {
+    if (!this.opponentPokemon || !this.opponentPokemon.skills) {
+      console.error('Le Pokémon adverse ou ses compétences sont manquants');
+      return;
+    }
+
+    const skill =
+      this.opponentPokemon.skills[
+        Math.floor(Math.random() * this.opponentPokemon.skills.length)
+      ];
+    const damage = this.calculateDamage(
+      this.opponentPokemon,
+      this.playerPokemon,
+      skill.power || 50,
+    );
+    this.playerPokemon.hp -= damage;
+    this.playerHpText.setText(`HP: ${this.playerPokemon.hp}`);
+    this.log.setText(
+      `${this.opponentPokemon.name} utilise ${skill.name} et inflige ${damage} dégâts !`,
+    );
+
+    if (this.playerPokemon.hp <= 0) {
+      this.log.setText(`${this.playerPokemon.name} est KO !`);
+
+      this.currentPlayerPokemonIndex += 1;
+      if (this.currentPlayerPokemonIndex < this.pokemonTeam.length) {
+        this.playerPokemon = this.pokemonTeam[this.currentPlayerPokemonIndex];
+        this.loadPokemon(this.playerPokemon, 'playerPokemonSprite');
+      } else {
+        this.log.setText('Tous vos Pokémon sont KO ! Vous avez perdu.');
+        this.playerSprite.setVisible(false);
+      }
+    }
+  }
+
+  calculateDamage(attacker, defender, skillPower) {
+    if (!attacker || !defender) {
+      console.error(
+        'Les données de l’attaquant ou du défenseur sont manquantes',
+        {
+          attacker,
+          defender,
+        },
+      );
+      return 0;
+    }
+
+    const attackStat = skillPower.isSpecial
+      ? attacker.specialAttack
+      : attacker.attack;
+    const defenseStat = skillPower.isSpecial
+      ? defender.specialDefense
+      : defender.defense;
+
+    if (
+      attackStat === null ||
+      attackStat === undefined ||
+      defenseStat === null ||
+      defenseStat === undefined
+    ) {
+      console.error('Statistiques invalides pour le calcul des dégâts', {
+        attackStat,
+        defenseStat,
+        skillPower,
+      });
+      return 0;
+    }
+
+    const damage =
+      (((2 * (attacker.level || 50)) / 5 + 2) *
+        skillPower *
+        (attackStat / defenseStat)) /
+        50 +
+      2;
+
+    return Math.floor(damage);
+  }
+}
 
 export default Battle;
