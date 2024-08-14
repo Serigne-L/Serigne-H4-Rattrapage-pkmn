@@ -86,7 +86,9 @@ Le serveur backend démarrera sur http://localhost:4000.
 
 Frontend :
 
+```
 npm start
+```
 
 L'application React frontend démarrera sur http://localhost:3000.
 
